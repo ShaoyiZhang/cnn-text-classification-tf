@@ -9,6 +9,10 @@ import data_helpers
 from text_cnn import TextCNN
 from tensorflow.contrib import learn
 import gensim
+
+# import sys
+# sys.path.append('../')
+# import utility
 # Parameters
 # ==================================================
 
@@ -53,12 +57,22 @@ x_text, y = data_helpers.load_data_and_labels(FLAGS.positive_data_file, FLAGS.ne
 # Build vocabulary
 max_document_length = max([len(x.split(" ")) for x in x_text])
 vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length)
-x = np.array(list(vocab_processor.fit_transform(x_text)))
+x_text = np.asarray(x_text)
+# for sentence in x_text:
+    # x_text =
+
+# x = np.array(list(vocab_processor.fit_transform(x_text)))
+
+# x = np.array()
+
+# print type(x[0]), x[0]
+print type(x_text[0]), len(x_text[0].split(' '))
+print '\n\n\n\n'
 # print "\n\nvocab sahpe: ",x.shape, "\n\n", x[0]
 # Randomly shuffle data
 np.random.seed(10)
 shuffle_indices = np.random.permutation(np.arange(len(y)))
-x_shuffled = x[shuffle_indices]
+x_shuffled = x_text[shuffle_indices]
 y_shuffled = y[shuffle_indices]
 
 # Split train/test set
@@ -69,15 +83,17 @@ y_train, y_dev = y_shuffled[:dev_sample_index], y_shuffled[dev_sample_index:]
 # print("Vocabulary Size: {:d}".format(len(vocab_processor.vocabulary_)))
 # print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
 
+print x_train.shape, '\n\n\n'
+# EMBEDDING = utility.Embedding()
 
 # Load Google's pre-trained Word2Vec model.
 # type -> numpy.ndarray
 print("loading pre-trained embedding, might take a while ...")
 embedding_pretrain = gensim.models.Word2Vec.load_word2vec_format(
     '../GoogleNews-vectors-negative300.bin', binary=True
-    ).syn0 # 2D-matrix  
+    ) #.syn0 can get 2D-matrix  
 
-print("Vocabulary Size: {:d}".format(embedding_pretrain.shape[0]))
+print("Vocabulary Size: {:d}".format(embedding_pretrain.syn0.shape[0]))
 print("Train/Dev split: {:d}/{:d}".format(len(y_train), len(y_dev)))
 
 
@@ -94,9 +110,9 @@ with tf.Graph().as_default():
             sequence_length=x_train.shape[1],
             num_classes=y_train.shape[1],
             # vocab_size=len(vocab_processor.vocabulary_),
-            vocab_size = embedding_pretrain.shape[0],
+            vocab_size = embedding_pretrain.syn0.shape[0],
             # embedding_size=FLAGS.embedding_dim,
-            embedding_size = embedding_pretrain.shape[1],
+            embedding_size = embedding_pretrain.syn0.shape[1],
             filter_sizes=list(map(int, FLAGS.filter_sizes.split(","))),
             num_filters=FLAGS.num_filters,
             pre_trained_embedding = embedding_pretrain,
@@ -148,12 +164,12 @@ with tf.Graph().as_default():
         
 
         # Write vocabulary
-        vocab_processor.save(os.path.join(out_dir, "vocab"))
+        # vocab_processor.save(os.path.join(out_dir, "vocab"))
 
         # Initialize all variables
         # sess.run(tf.initialize_all_variables())
         init = tf.initialize_all_variables()
-        sess.run(init,feed_dict = {cnn.embedding_placeholder:embedding_pretrain})
+        #sess.run(init,feed_dict = {cnn.embedding_placeholder:embedding_pretrain})
         # if FLAGS.isWord2Vec:
         #     # initial matrix with random uniform
         #     initW = np.random.uniform(-0.25,0.25,(len(vocab_processor.vocabulary_), FLAGS.embedding_dim))
@@ -165,16 +181,16 @@ with tf.Graph().as_default():
             """
             A single training step
             """
-
-            
-            
             feed_dict = {
                 cnn.input_x: x_batch,
                 cnn.input_y: y_batch,
                 cnn.dropout_keep_prob: FLAGS.dropout_keep_prob,
+                cnn.embedded_chars: x_batch
                 # cnn.embedding_placeholder: embedding_pretrain # load pre-trained embedding
                 # cnn.embedding_matrix: embedding
             }
+            print x_batch
+            print y_batch
             _, step, summaries, loss, accuracy = sess.run(
                 [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
                 feed_dict)
@@ -203,8 +219,16 @@ with tf.Graph().as_default():
         batches = data_helpers.batch_iter(
             list(zip(x_train, y_train)), FLAGS.batch_size, FLAGS.num_epochs)
         # Training loop. For each batch...
+        
+        # for batch in batches:
+        #     # lookup embedding
+        #     batch = EMBEDDING.lookup_embedding(batch)
+
         for batch in batches:
             x_batch, y_batch = zip(*batch)
+            # lookup embedding
+            x_batch = cnn.lookup_embedding(batch)
+            print "\n\nX_BATCH\n\n", x_batch
             train_step(x_batch, y_batch)
             current_step = tf.train.global_step(sess, global_step)
             if current_step % FLAGS.evaluate_every == 0:

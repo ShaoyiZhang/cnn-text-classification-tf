@@ -15,7 +15,10 @@ class TextCNN(object):
         self.input_x = tf.placeholder(tf.int32, [None, sequence_length], name="input_x")
         self.input_y = tf.placeholder(tf.float32, [None, num_classes], name="input_y")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
-
+        
+        # gensim object
+        self.embeddings = pre_trained_embedding
+        
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)
 
@@ -46,19 +49,38 @@ class TextCNN(object):
         
         # embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, embedding_size])
 
-        with tf.device('/cpu:0'),tf.name_scope('embedding_pretrain'):
-            self.embeddings = tf.Variable(
-                            tf.random_uniform([vocab_size, embedding_size], minval=-0.1, maxval=0.1),
-                            trainable=False
-                            )
-            self.embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, embedding_size])
-            # embeddings = self.embeddings.assign(self.embedding_placeholder)
-            set_embeddings = self.embeddings.assign(self.embedding_placeholder)
-        
-        with tf.device('/cpu:0'),tf.name_scope('embedding'):
-            self.embedded_chars = tf.nn.embedding_lookup(self.embeddings, self.input_x)
-            self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
+        # with tf.device('/cpu:0'),tf.name_scope('embedding_pretrain'):
+            # self.embeddings = tf.Variable(
+            #                 tf.random_uniform([vocab_size, embedding_size], minval=-0.1, maxval=0.1),
+            #                 trainable=False
+            #                 )
+            # self.embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, embedding_size])
+            #####embeddings = self.embeddings.assign(self.embedding_placeholder)
+            # set_embeddings = self.embeddings.assign(self.embedding_placeholder)
             
+            # print self.embeddings
+            # print 'gg'
+            
+
+        with tf.device('/cpu:0'),tf.name_scope('embedding'):
+            # input_x is a list of words, we need to convert them into embeddings
+            # ['' for word in self.input_x]
+            # x = []
+            # for word in self.input_x:
+            # self.embedded_chars = self.lookup_embedding
+            # self.embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, embedding_size])
+            # self.
+            self.embedded_chars = tf.placeholder(tf.float32, [None,sequence_length, embedding_size])
+            # self.input_x#tf.nn.embedding_lookup(self.embeddings, self.input_x)
+            self.embedded_chars_expanded = tf.expand_dims(self.embedded_chars, -1)
+            # print self.embedded_chars
+
+
+
+            print self.embedded_chars_expanded
+
+            # print
+            # sleep()
         
         # Create a convolution + maxpool layer for each filter size
         pooled_outputs = []
@@ -117,3 +139,18 @@ class TextCNN(object):
         with tf.device('/gpu:0'),tf.name_scope("accuracy"):
             correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
+
+    def lookup_embedding(self,batchText):
+        batch = []# np.array()
+        for sentence in batchText:
+            currSentEmb = []
+            print sentence
+            for word in sentence:
+                try:
+                    currSentEmb.append(self.embeddings[word])
+                except:
+                    # ignore new word
+                    print '\nkey error\n'
+                    pass
+            batch.append(currSentEmb)
+        return batch
