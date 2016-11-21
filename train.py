@@ -57,19 +57,26 @@ x_text, y = data_helpers.load_data_and_labels(FLAGS.positive_data_file, FLAGS.ne
 # Build vocabulary
 max_document_length = max([len(x.split(" ")) for x in x_text])
 vocab_processor = learn.preprocessing.VocabularyProcessor(max_document_length)
-x_text = np.asarray(x_text)
-# for sentence in x_text:
-    # x_text =
-
+for i in range(len(x_text)):
+    # print type(x_text[i])
+    sentence = [0] * max_document_length
+    if (type(x_text[i]) == list):
+        print x_text[i]
+    temp = x_text[i].split(" ")
+    for wordIndex in range(len(temp)):
+        sentence[i] =  
 # x = np.array(list(vocab_processor.fit_transform(x_text)))
 
 # x = np.array()
+x_text = np.array(x_text)
 
 # print type(x[0]), x[0]
-print type(x_text[0]), len(x_text[0].split(' '))
+print type(x_text[0])#, len(x_text[0].split(' '))
 print '\n\n\n\n'
+print x_text.shape
 # print "\n\nvocab sahpe: ",x.shape, "\n\n", x[0]
 # Randomly shuffle data
+
 np.random.seed(10)
 shuffle_indices = np.random.permutation(np.arange(len(y)))
 x_shuffled = x_text[shuffle_indices]
